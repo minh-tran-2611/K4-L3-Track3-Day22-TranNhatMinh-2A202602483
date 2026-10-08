@@ -1,6 +1,6 @@
 # Bài phản tư — Lab 22 (căn chỉnh mô hình bằng DPO/ORPO)
 
-**Tên:** Minh Tran (GitHub: minh-tran-2611)
+**Tên:** Trần Nhật Minh — 2A202602483 (GitHub: minh-tran-2611)
 **Khoá:** A20-K4
 **Tier đã chạy:** T4
 **Ngày:** 2026-10-08
