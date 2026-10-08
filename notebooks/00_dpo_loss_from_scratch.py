@@ -59,8 +59,9 @@ print(f"sum log p = {total.item():.3f}   mean log p = {mean.item():.3f}")
 # %%
 def my_dpo_loss(pc, pr, rc, rr, beta=0.1):
     """pc/pr: policy log-prob chosen/rejected; rc/rr: reference. Trả về loss trung bình."""
-    # TODO: viết bằng torch.nn.functional.logsigmoid
-    return None
+    chosen_reward = beta * (pc - rc)  # reward ngầm của câu chosen
+    rejected_reward = beta * (pr - rr)  # reward ngầm của câu rejected
+    return -torch.nn.functional.logsigmoid(chosen_reward - rejected_reward).mean()
 
 
 # %%
@@ -148,3 +149,16 @@ print(f"ORPO  {M.orpo_loss(avg_c, avg_r, -avg_c).item():.4f}")
 # **Câu hỏi cho REFLECTION §3:** tổng log-prob của câu dài luôn âm hơn câu ngắn.
 # Vì sao điều đó khiến DPO gốc dễ thiên vị độ dài, và SimPO/ORPO xử lý bằng cách nào?
 # Gợi ý: NB2 in ra tỉ lệ cặp có chosen dài hơn rejected trong dữ liệu tiếng Việt.
+
+# %% [markdown]
+# ### Trả lời: vì sao margin tăng được trong khi log-prob của *chosen* giảm?
+#
+# DPO chỉ tối ưu **hiệu** `β[(log π(y_w) − log π_ref(y_w)) − (log π(y_l) − log π_ref(y_l))]`, không ràng buộc
+# từng số hạng. Kịch bản B ở mục 5 cho thấy: chosen giảm 3 nat, rejected giảm 5 nat ⇒ margin vẫn tăng 2 nat và
+# loss bằng đúng kịch bản A (0.127). Khối xác suất bị lấy khỏi *cả hai* câu (thường là những câu dài, có nhiều token
+# chung giữa chosen và rejected) và dồn sang các chuỗi khác ngoài dữ liệu. Đó là **likelihood displacement**:
+# loss giảm nhưng mô hình có thể *kém* sinh ra câu chosen hơn. RPO thêm NLL(chosen) (mục 5) nên phạt kịch bản B.
+#
+# Về thiên vị độ dài: tổng log-prob của câu dài âm hơn nhiều, nên một thay đổi nhỏ trên mỗi token cộng dồn thành
+# reward lớn ⇒ câu dài chi phối gradient. SimPO/ORPO dùng log-prob **trung bình theo token** nên loại bỏ hiệu ứng
+# cộng dồn này (SimPO còn thêm margin γ, ORPO dùng log-odds-ratio cộng NLL).
